@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clinic Management System</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; line-height: 1.6; max-width: 500px; margin: auto; }
+        input, button { width: 100%; padding: 10px; margin-top: 10px; box-sizing: border-box; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Clinic Login</h1>
+    <div id="login-form">
+        <input type="email" id="email" placeholder="Email (e.g., test@test.com)">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="handleLogin()">Login</button>
+    </div>
+
+    <div id="status"></div>
+
+    <script>
+        async function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const statusDiv = document.getElementById('status');
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Save the token for future requests
+                    localStorage.setItem('token', data.token);
+                    statusDiv.innerHTML = `<p class="success">Welcome, ${data.user.name}! (Role: ${data.user.role})</p>`;
+                    window.location.href = '/dashboard.html';
+                } else {
+                    statusDiv.innerHTML = `<p class="error">Error: ${data.error}</p>`;
+                }
+            } catch (err) {
+                statusDiv.innerHTML = `<p class="error">Connection failed.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
