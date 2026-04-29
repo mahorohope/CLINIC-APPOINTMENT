@@ -1,92 +1,91 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const token = localStorage.getItem('token');
-    if (!token) return window.location.href = 'index.html';
+    // 1. Get User Data from localStorage
+    const userData = localStorage.getItem('user');
+    
+    if (!userData) {
+        console.warn("No session found. Redirecting to login...");
+        window.location.href = 'index.html'; // Points to your login page
+        return;
+    }
 
-    // Decode JWT for user identification
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    document.getElementById('user-welcome').innerText = `Hello, ${payload.name || 'User'}`;
+    const user = JSON.parse(userData);
 
-    // Switch views based on Role
-    if (payload.role === 'staff') {
-        document.getElementById('staff-view').classList.remove('hidden');
-        loadStaffData();
+    // 2. Display Welcome Message
+    const welcomeEl = document.getElementById('user-welcome');
+    if (welcomeEl) {
+        welcomeEl.innerText = `Welcome, ${user.name}`;
+    }
+
+    // 3. Flexible Role Check (Fixes the "Staff" vs "staff" issue)
+    // We convert the role to lowercase to catch all variations
+    const role = user.role ? user.role.toLowerCase() : '';
+
+    if (role.includes('staff') || role.includes('admin')) {
+        console.log("Authorized as Staff/Admin");
+        document.getElementById('staff-view')?.classList.remove('hidden');
+        loadAppointments(); // Fetch the queue only for staff
     } else {
-        document.getElementById('patient-view').classList.remove('hidden');
-        handleBooking();
+        console.log("Authorized as Patient");
+        document.getElementById('patient-view')?.classList.remove('hidden');
+    }
+
+    // 4. Handle Patient Booking Form
+    const bookingForm = document.getElementById('booking-form');
+    if (bookingForm) {
+        bookingForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const dateInput = document.getElementById('appointment-date').value;
+
+            try {
+                const response = await fetch('/api/book-appointment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        date: dateInput, 
+                        patientName: user.name 
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert(`Success! Your Queue Number is: ${data.queueNumber}`);
+                    bookingForm.reset();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (err) {
+                console.error("Booking connection error:", err);
+            }
+        });
     }
 });
 
-function handleBooking() {
-    const form = document.getElementById('booking-form');
-    form.onsubmit = async (e) => {
-        e.preventDefault();
-        const date = document.getElementById('appointment-date').value;
+// 5. Populate Staff Queue Table
+async function loadAppointments() {
+    const tableBody = document.getElementById('appointments-table-body');
+    if (!tableBody) return;
 
-        // The URL must include /api/ to match the backend routes
-        const res = await fetch('/api/appointments', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({ date })
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-            // FIX: Using queue_number (underscore) to match the model
-            alert(`Success! Your Queue Number is #${data.queue_number}.`);
-            location.reload(); 
-        } else {
-            alert("Error: " + data.error);
-        }
-    };
-}
-
-async function loadStaffData() {
     try {
-        const res = await fetch('/api/appointments', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        
-        // If the server sends HTML instead of JSON, this will fail safely
-        const appointments = await res.json();
-        if (!res.ok) throw new Error(appointments.error || "Server Error");
+        const response = await fetch('/api/appointments');
+        const appointments = await response.json();
 
-        const tbody = document.getElementById('appointments-table-body');
-        
-        tbody.innerHTML = appointments.map(app => `
+        tableBody.innerHTML = appointments.map(app => `
             <tr>
-                <td>#${app.queue_number}</td>
-                <td>${app.patient ? app.patient.name : 'Unknown'}</td>
-                <td>${app.status}</td>
+                <td>#${app.id}</td>
+                <td>${app.patient_name}</td>
+                <td><strong>${app.status}</strong></td>
                 <td>
-                    ${app.status === 'pending' 
-                        ? `<button onclick="updateStatus(${app.id}, 'served')">Serve</button>` 
-                        : 'Completed'}
+                    <button onclick="updateStatus(${app.id}, 'Completed')" style="background:#28a745; padding:5px 10px;">Complete</button>
                 </td>
             </tr>
         `).join('');
     } catch (err) {
-        console.error("Fetch Error:", err);
-        document.getElementById('appointments-table-body').innerHTML = 
-            `<tr><td colspan="4" style="color:red">Error: ${err.message}. Ensure server is running.</td></tr>`;
+        console.error("Failed to load appointments:", err);
     }
 }
 
-async function updateStatus(id, newStatus) {
-    const res = await fetch(`/api/appointments/${id}`, {
-        method: 'PATCH',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ status: newStatus })
-    });
-    if (res.ok) loadStaffData();
-}
-
+// 6. Logout and Clear Storage
 function logout() {
-    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     window.location.href = 'index.html';
 }

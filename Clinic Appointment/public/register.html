@@ -1,36 +1,60 @@
 <!DOCTYPE html>
-<html>
-<head><title>QueueCare - Register</title></head>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clinic Registration</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; }
+        .form-container { width: 300px; display: flex; flex-direction: column; gap: 15px; }
+        input, select, button { padding: 10px; font-size: 16px; }
+        button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
 <body>
-    <h2>Create Account</h2>
-    <form id="regForm">
-        <input type="text" id="name" placeholder="Full Name" required><br>
-        <input type="email" id="email" placeholder="Email" required><br>
-        <input type="password" id="password" placeholder="Password" required><br>
-        <select id="role">
-            <option value="patient">Patient</option>
-            <option value="staff">Staff/Admin</option>
-        </select><br>
-        <button type="submit">Register</button>
-    </form>
-    <p id="msg"></p>
+    <div class="form-container">
+        <h2>Register</h2>
+        <form id="register-form">
+            <input type="text" id="name" placeholder="Full Name" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <select id="role">
+                <option value="Patient">Patient</option>
+                <option value="Staff/Admin">Staff/Admin</option>
+            </select>
+            <button type="submit">Register Account</button>
+        </form>
+        <p>Already have an account? <a href="index.html">Login here</a></p>
+    </div>
 
     <script>
-        document.getElementById('regForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    name: document.getElementById('name').value,
-                    email: document.getElementById('email').value,
-                    password: document.getElementById('password').value,
-                    role: document.getElementById('role').value
-                })
-            });
-            const data = await res.json();
-            document.getElementById('msg').innerText = data.error || "Success! Go to login.html";
-        };
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Prevents the blank screen/refresh issue
+
+            const userData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                role: document.getElementById('role').value
+            };
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert("Registration successful!");
+                    window.location.href = 'index.html'; // Redirect to login
+                } else {
+                    alert("Error: " + result.error);
+                }
+            } catch (err) {
+                alert("Connection failed. Ensure app.js is running.");
+            }
+        });
     </script>
 </body>
 </html>

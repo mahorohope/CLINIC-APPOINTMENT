@@ -27,7 +27,7 @@
             const statusDiv = document.getElementById('status');
 
             try {
-                const response = await fetch('/api/login', {
+                const response = await fetch('/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -36,11 +36,12 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Save the token for future requests
-                    localStorage.setItem('token', data.token);
-                    statusDiv.innerHTML = `<p class="success">Welcome, ${data.user.name}! (Role: ${data.user.role})</p>`;
-                    window.location.href = '/dashboard.html';
-                } else {
+    // This is the critical line that fixes the "Session expired" error
+                localStorage.setItem('user', JSON.stringify(data.user));
+    
+               statusDiv.innerHTML = `<p class="success">Welcome, ${data.user.name}!</p>`;
+               window.location.href = 'dashboard.html';
+              } else {
                     statusDiv.innerHTML = `<p class="error">Error: ${data.error}</p>`;
                 }
             } catch (err) {

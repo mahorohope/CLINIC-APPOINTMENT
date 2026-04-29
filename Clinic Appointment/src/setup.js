@@ -1,25 +1,40 @@
-const { register } = require('./auth');
-const { sequelize } = require('./models');
+// src/setup.js
+require('dotenv').config();
+const pool = require('./database');
 
-async function setup() {
-  try {
-    // Force sync recreates tables based on your models
-    await sequelize.sync({ force: true });
-    console.log("Database tables created.");
+const createTables = async () => {
+    const query = `
+        -- Create Users Table
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'patient',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
 
-    // Create a Staff account for the reviewer
-    await register("Assessor", "staff@clinic.com", "admin123", "staff");
-    console.log("✅ Staff Account: staff@clinic.com / admin123");
+        -- Create Appointments Table
+        CREATE TABLE IF NOT EXISTS appointments (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            patient_name TEXT NOT NULL,
+            appointment_date DATE NOT NULL,
+            status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    `;
 
-    // Create a Patient account for testing
-    await register("Test Patient", "test@test.com", "password123", "patient");
-    console.log("✅ Patient Account: test@test.com / password123");
+    try {
+        console.log("⏳ Initializing Supabase tables...");
+        await pool.query(query);
+        console.log("✅ Tables created successfully or already exist.");
+    } catch (err) {
+        console.error("❌ Error setting up database:", err);
+    } finally {
+        // Close the pool so the script finishes and exits the terminal
+        await pool.end();
+    }
+};
 
-    process.exit(0);
-  } catch (err) {
-    console.error("Setup failed:", err.message);
-    process.exit(1);
-  }
-}
-
-setup();
+createTables();

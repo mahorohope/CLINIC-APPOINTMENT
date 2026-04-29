@@ -1,5 +1,5 @@
 const request = require('supertest');
-const { app, sequelize } = require('../src/app');
+const { app, sequelize } = require('../app');
 
 describe('QueueCare QA Automation', () => {
   beforeAll(async () => {
